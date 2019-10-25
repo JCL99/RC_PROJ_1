@@ -10,6 +10,7 @@
 
 #define MAX_SIZE 4096
 #define STDIN 0
+#define TRUE 1999
 
 void setupSocket(char *adrr, char *port);
 void keepChatting();
@@ -57,7 +58,7 @@ void keepChatting(){
   char messageBuffer[MAX_SIZE];
   int messageSize;
 
-  while (1999){
+  while (TRUE){
     FD_CLR(socket_fd, &read_fds);
     FD_SET(socket_fd, &read_fds);
     FD_SET(STDIN, &read_fds);
@@ -66,19 +67,18 @@ void keepChatting(){
 
     if (FD_ISSET(STDIN, &read_fds)){
       bzero(messageBuffer, sizeof(messageBuffer));
-      messageSize = read(0, messageBuffer, sizeof(messageBuffer));
-      write(socket_fd, messageBuffer, sizeof(messageBuffer));
+      messageSize = read(STDIN, messageBuffer, sizeof(messageBuffer));
+      messageSize = write(socket_fd, messageBuffer, sizeof(messageBuffer));
     }
     else if (FD_ISSET(socket_fd, &read_fds)){
       bzero(messageBuffer, sizeof(messageBuffer));
       messageSize = read(socket_fd, messageBuffer, sizeof(messageBuffer));
       if (messageSize <= 0){
         fprintf(stderr, "[!] keepChatting(): server orderly disconnected\n");
+        close(socket_fd);
         exit(EXIT_SUCCESS);
       }
       printf("From server: %s\n", messageBuffer);
     }
   }
-
-  exit(EXIT_SUCCESS);
 }
