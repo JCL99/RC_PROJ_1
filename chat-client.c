@@ -15,8 +15,8 @@
 void setupSocket(char *adrr, char *port);
 void keepChatting();
 
-int socket_fd, connection_fd;
-struct sockaddr_in server_addr, client_addr;
+int socket_fd;
+struct sockaddr_in server_addr;
 
 int main(int argc, char **argv, char **envp){
 
