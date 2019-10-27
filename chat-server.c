@@ -36,7 +36,7 @@ int main(int argc, char **argv, char **envp){
 
   while (TRUE){
     connection_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &len);
-    if (connfd < 0) {
+    if (connection_fd < 0) {
         printf("server acccept failed...\n");
         exit(0);
     }
