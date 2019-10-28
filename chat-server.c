@@ -13,17 +13,13 @@
 #define TRUE 1999
 
 int socket_fd, connection_fd;
-struct sockaddr_in server_addr;
-
-typedef struct client{
-  struct sockaddr_in client_addr;
-  int ip_addr;
-}
+struct sockaddr_in server_addr, client_addr;
 
 void setupSocket(char *port);
 
 int main(int argc, char **argv, char **envp){
-
+  unsigned int len;
+  char messageBuffer[4096]; int messageSize = 0;
   /* Validate args */
   if (argc < 2){
     fprintf(stderr, "[!] Wrong or missing arguments\n");
@@ -34,11 +30,17 @@ int main(int argc, char **argv, char **envp){
   /* Setup the socket */
   setupSocket(argv[1]);
 
+  len = sizeof(client_addr);
+  connection_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &len);
+  if (connection_fd < 0) {
+      fprintf(stderr, "[!] main(): accept() failed\n");
+      exit(EXIT_FAILURE);
+  }
+
   while (TRUE){
-    connection_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &len);
-    if (connection_fd < 0) {
-        fprintf(stderr, "[!] main(): accept() failed\n");
-        exit(EXIT_FAILURE);
+    messageSize = read(connection_fd, messageBuffer, sizeof(messageBuffer));
+    if(messageBuffer[0] != EOF && messageSize != 0){
+      printf("From client: %s\n", messageBuffer);
     }
   }
 
