@@ -19,6 +19,7 @@ void setupSocket(char *port);
 
 int main(int argc, char **argv, char **envp){
   unsigned int len;
+  fd_set readfds;
   char messageBuffer[4096]; int messageSize = 0;
   /* Validate args */
   if (argc < 2){
@@ -40,7 +41,7 @@ int main(int argc, char **argv, char **envp){
   while (TRUE){
     messageSize = read(connection_fd, messageBuffer, sizeof(messageBuffer));
     if(messageBuffer[0] != EOF && messageSize != 0){
-      printf("From client: %s\n", messageBuffer);
+      printf("From %s:%d : %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port) , messageBuffer);
     }
   }
 
