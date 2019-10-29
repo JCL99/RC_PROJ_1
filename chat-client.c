@@ -71,14 +71,14 @@ void keepChatting(){
       messageSize = write(socket_fd, messageBuffer, sizeof(messageBuffer));
     }
     else if (FD_ISSET(socket_fd, &read_fds)){
-      bzero(messageBuffer, sizeof(messageBuffer));
+      bzero(messageBuffer, sizeof(messageBuffer));  
       messageSize = read(socket_fd, messageBuffer, sizeof(messageBuffer));
       if (messageSize <= 0){
         fprintf(stderr, "[!] keepChatting(): server orderly disconnected\n");
         close(socket_fd);
         exit(EXIT_SUCCESS);
       }
-      printf("From server: %s\n", messageBuffer);
+      printf("%s", messageBuffer);
     }
   }
 }

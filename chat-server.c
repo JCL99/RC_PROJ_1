@@ -22,6 +22,7 @@ void setupSocket(char *port);
 int main(int argc, char **argv, char **envp){
   unsigned int len;
   fd_set readfds;
+  int i;
   char messageBuffer[4096]; int messageSize = 0;
   /* Validate args */
   if (argc < 2){
@@ -29,7 +30,7 @@ int main(int argc, char **argv, char **envp){
     fprintf(stderr, "[!] Try : ./chat-server <port>\n");
     exit(EXIT_FAILURE);
   }
-  for (int i = 0; i < MAXCLIENTS; i++) {   
+  for (i = 0; i < MAXCLIENTS - 1; i++) {   
       client_socket[i] = 0;   
   }   
     
@@ -41,7 +42,7 @@ int main(int argc, char **argv, char **envp){
     FD_ZERO(&readfds);
     FD_SET(socket_fd, &readfds);
 
-    for (int i = 0 ; i < MAXCLIENTS ; i++) {   
+    for (int i = 0 ; i < MAXCLIENTS - 1 ; i++) {   
       //socket descriptor  
       fd = client_socket[i];   
             
@@ -52,9 +53,9 @@ int main(int argc, char **argv, char **envp){
       //Highest file decriptor from the sockets  
       if(fd > max_fd)   
           max_fd = fd;   
-    }   
-
-    fd_changed = select( max_fd + 1 , &readfds , NULL , NULL , NULL);   
+    }
+    
+    fd_changed = select( max_fd + 1 , &readfds , NULL , NULL , NULL); 
     if ((fd_changed < 0)) { 
       fprintf(stderr, "[!] select(): failed\n");  
       exit(EXIT_FAILURE);
@@ -66,21 +67,54 @@ int main(int argc, char **argv, char **envp){
         fprintf(stderr, "[!] main(): accept() failed\n");
         exit(EXIT_FAILURE);
       }
-    else{
-      printf("%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
-      for ()
-      client_socket[]
+      else{
+        /*Adding the socket file descriptor to the list of clients*/
+        for (i = 0 ; i < MAXCLIENTS-1; i++){
+          if((client_socket[i] == 0)){
+            client_socket[i] = connection_fd; 
+            break;
+          }
+        }
+      
+        for (i = 0; i < MAXCLIENTS - 1; i++) {
+          if ((client_socket[i]) != 0) {
+            dprintf(client_socket[i], "%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+            /* dprintf(0, "%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port)); */
+          }
+        }
+      }
     }
-
-    } 
-
-    max_fd = socket_fd;
-    messageSize = read(connection_fd, messageBuffer, sizeof(messageBuffer));
-    if(messageBuffer[0] != EOF && messageSize != 0){
-      printf("From %s:%d : %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port) , messageBuffer);
+    for(i = 0 ; i < MAXCLIENTS - 1; i++) {
+      if (FD_ISSET(client_socket[i] , &readfds)){
+        messageSize = read(client_socket[i], messageBuffer, sizeof(messageBuffer));
+        if(messageBuffer[0] != EOF && messageSize != 0) {
+          //send the msg to everyone but who sent it
+          for (int j = 0; j < MAXCLIENTS - 1; j++) {
+            if (client_socket[i] != client_socket[j] && client_socket[j] != 0) {
+              dprintf(client_socket[j] , "From %s:%d : %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer);
+              /* dprintf(0, " %s:%d: %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer); */
+            }
+          }
+        }
+        if(messageBuffer[0] == EOF){
+          close(client_socket[i]);
+          client_socket[i] = 0;
+        }
+      }
+    }
+    /*if it's read from the stdin a EOF, or a signal to finish, it'll free the port from the socket*/
+    if (FD_ISSET(STDIN, &readfds)){
+      messageSize = read(STDIN, messageBuffer, sizeof(messageBuffer));
+      if (messageBuffer[0] == EOF){
+        for (int j = 0; j < MAXCLIENTS - 1; j++) {
+          if (client_socket[j] != 0)
+            close(client_socket[j]);
+        }
+        close(socket_fd);
+        return 0;
+      } 
     }
   }
-
   return 0;
 }
 
@@ -89,7 +123,7 @@ void setupSocket(char *port){
     fprintf(stderr, "[!] setupSocket(): socket() failed\n");
     exit(EXIT_FAILURE);
   }
-
+  max_fd=socket_fd;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
   server_addr.sin_port = htons(atoi(port));
