@@ -11,8 +11,10 @@
 #define MAX_SIZE 4096
 #define STDIN 0
 #define TRUE 1999
+#define MAXCLIENTS 1000
 
-int socket_fd, connection_fd;
+int socket_fd, connection_fd, client_socket[MAXCLIENTS];
+int max_fd, fd, fd_changed;
 struct sockaddr_in server_addr, client_addr;
 
 void setupSocket(char *port);
@@ -27,18 +29,52 @@ int main(int argc, char **argv, char **envp){
     fprintf(stderr, "[!] Try : ./chat-server <port>\n");
     exit(EXIT_FAILURE);
   }
+  for (int i = 0; i < MAXCLIENTS; i++) {   
+      client_socket[i] = 0;   
+  }   
+    
 
   /* Setup the socket */
   setupSocket(argv[1]);
 
-  len = sizeof(client_addr);
-  connection_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &len);
-  if (connection_fd < 0) {
-      fprintf(stderr, "[!] main(): accept() failed\n");
-      exit(EXIT_FAILURE);
-  }
-
   while (TRUE){
+    FD_ZERO(&readfds);
+    FD_SET(socket_fd, &readfds);
+
+    for (int i = 0 ; i < MAXCLIENTS ; i++) {   
+      //socket descriptor  
+      fd = client_socket[i];   
+            
+      //Add the file descriptor to the set, to be used in the select function  
+      if(fd > 0)   
+          FD_SET( fd , &readfds);   
+            
+      //Highest file decriptor from the sockets  
+      if(fd > max_fd)   
+          max_fd = fd;   
+    }   
+
+    fd_changed = select( max_fd + 1 , &readfds , NULL , NULL , NULL);   
+    if ((fd_changed < 0)) { 
+      fprintf(stderr, "[!] select(): failed\n");  
+      exit(EXIT_FAILURE);
+    }
+    if (FD_ISSET(socket_fd, &readfds)) {
+      len = sizeof(client_addr);
+      connection_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &len);
+      if (connection_fd < 0) {
+        fprintf(stderr, "[!] main(): accept() failed\n");
+        exit(EXIT_FAILURE);
+      }
+    else{
+      printf("%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+      for ()
+      client_socket[]
+    }
+
+    } 
+
+    max_fd = socket_fd;
     messageSize = read(connection_fd, messageBuffer, sizeof(messageBuffer));
     if(messageBuffer[0] != EOF && messageSize != 0){
       printf("From %s:%d : %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port) , messageBuffer);
