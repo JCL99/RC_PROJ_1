@@ -13,7 +13,7 @@
 #define TRUE 1999
 #define MAXCLIENTS 1000
 
-int socket_fd, connection_fd, client_socket[MAXCLIENTS];
+int socket_fd,tamanho, connection_fd, client_socket[MAXCLIENTS];
 int max_fd, fd, fd_changed;
 struct sockaddr_in server_addr, client_addr;
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv, char **envp){
 
   /* Setup the socket */
   setupSocket(argv[1]);
-
+  tamanho=sizeof(client_addr);
   while (TRUE){
     FD_ZERO(&readfds);
     FD_SET(socket_fd, &readfds);
@@ -89,6 +89,7 @@ int main(int argc, char **argv, char **envp){
         messageSize = read(client_socket[i], messageBuffer, sizeof(messageBuffer));
         if(messageBuffer[0] != EOF && messageSize != 0) {
           //send the msg to everyone but who sent it
+          getpeername(client_socket[i] , (struct sockaddr*)&client_addr , (socklen_t*)&tamanho);
           for (int j = 0; j < MAXCLIENTS - 1; j++) {
             if (client_socket[i] != client_socket[j] && client_socket[j] != 0) {
               dprintf(client_socket[j] , "From %s:%d : %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer);
