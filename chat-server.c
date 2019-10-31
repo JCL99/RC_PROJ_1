@@ -17,6 +17,7 @@ int socket_fd,tamanho, connection_fd, client_socket[MAXCLIENTS];
 int max_fd, fd, fd_changed;
 struct sockaddr_in server_addr, client_addr;
 int opt=1;
+int iter;
 
 void setupSocket(char *port);
 
@@ -24,7 +25,10 @@ int main(int argc, char **argv, char **envp){
   unsigned int len;
   fd_set readfds;
   int i;
-  char messageBuffer[4096]; int messageSize = 0;
+  char messageBuffer[4096]; 
+  char aux[4096];
+  int messageSize = 0;
+  
   /* Validate args */
   if (argc < 2){
     fprintf(stderr, "[!] Wrong or missing arguments\n");
@@ -88,18 +92,27 @@ int main(int argc, char **argv, char **envp){
         bzero(messageBuffer, sizeof(messageBuffer));
         messageSize = read(client_socket[i], messageBuffer, sizeof(messageBuffer));
         getpeername(client_socket[i] , (struct sockaddr*)&client_addr , (socklen_t*)&tamanho);
-        if(messageSize != 0) {
+        if(messageSize > 0) {
           //send the msg to everyone but who sent it
-          for (int j = 0; j < MAXCLIENTS; j++) {
-            if (client_socket[j] != 0) {
-              dprintf(client_socket[j] , "%s:%d %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer);
+
+          for(int k=0;k<messageSize;k++){
+            strncat(aux,&messageBuffer[k],1);
+            if(messageBuffer[k]=='\n'){
+              for (int j = 0; j < MAXCLIENTS; j++) {
+                if (client_socket[j] != 0 && client_socket[j]!=client_socket[i]) {
+                  dprintf(client_socket[j] , "%s:%d %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), aux);
               /* dprintf(0, " %s:%d: %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer); */
+                }
+              }
+              bzero(aux,MAX_SIZE);
+
             }
           }
+          
         }
         if(messageSize == 0 ){
           for (int j = 0; j < MAXCLIENTS; j++){
-              if (client_socket[j] != 0){
+              if (client_socket[j] != 0 && client_socket[j]!=client_socket[i]){
                 dprintf(client_socket[j], "%s:%d left.\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
               }
               
