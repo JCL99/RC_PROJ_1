@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 
 
-#define MAX_SIZE 4096
+#define MAX_SIZE 5000
 #define STDIN 0
 #define TRUE 1999
 
@@ -77,7 +77,7 @@ void keepChatting(){
     }
 
     if (FD_ISSET(STDIN, &read_fds)){
-      bzero(messageBuffer, sizeof(messageBuffer));
+      bzero(messageBuffer, MAX_SIZE);
       messageSize = read(STDIN, messageBuffer, MAX_SIZE);
       if(messageSize==0){
         verifywrite = write(socket_fd, messageBuffer, messageSize);
@@ -96,15 +96,15 @@ void keepChatting(){
         }
       }
       
-      bzero(messageBuffer, sizeof(messageBuffer));
+      bzero(messageBuffer, MAX_SIZE);
       
       
       
 
     }
     else if (FD_ISSET(socket_fd, &read_fds)){
-      bzero(messageBuffer, sizeof(messageBuffer));  
-      messageSize = read(socket_fd, messageBuffer, sizeof(messageBuffer));
+      bzero(messageBuffer, MAX_SIZE);  
+      messageSize = read(socket_fd, messageBuffer, MAX_SIZE);
       if (messageSize <= 0){
         fprintf(stderr, "[!] keepChatting(): server orderly disconnected\n");
         close(socket_fd);

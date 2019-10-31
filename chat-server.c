@@ -8,7 +8,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 
-#define MAX_SIZE 4096
+#define MAX_SIZE 5000
 #define STDIN 0
 #define TRUE 1999
 #define MAXCLIENTS 1000
@@ -25,8 +25,8 @@ int main(int argc, char **argv, char **envp){
   unsigned int len;
   fd_set readfds;
   int i;
-  char messageBuffer[4096]; 
-  char aux[4096];
+  char messageBuffer[MAX_SIZE]; 
+  char aux[MAX_SIZE];
   int messageSize = 0;
   
   /* Validate args */
@@ -89,8 +89,8 @@ int main(int argc, char **argv, char **envp){
     }
     for(i = 0 ; i < MAXCLIENTS; i++) {
       if (FD_ISSET(client_socket[i] , &readfds)){
-        bzero(messageBuffer, sizeof(messageBuffer));
-        messageSize = read(client_socket[i], messageBuffer, sizeof(messageBuffer));
+        bzero(messageBuffer, MAX_SIZE);
+        messageSize = read(client_socket[i], messageBuffer, MAX_SIZE);
         getpeername(client_socket[i] , (struct sockaddr*)&client_addr , (socklen_t*)&tamanho);
         if(messageSize > 0) {
           //send the msg to everyone but who sent it
@@ -112,9 +112,9 @@ int main(int argc, char **argv, char **envp){
         }
         if(messageSize == 0 ){
           for (int j = 0; j < MAXCLIENTS; j++){
-              if (client_socket[j] != 0 && client_socket[j]!=client_socket[i]){
-                dprintf(client_socket[j], "%s:%d left.\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
-              }
+            if (client_socket[j] != 0 && client_socket[j]!=client_socket[i]){
+              dprintf(client_socket[j], "%s:%d left.\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+            }
               
           }
           close(client_socket[i]);
@@ -122,7 +122,7 @@ int main(int argc, char **argv, char **envp){
         }
       }
     }
-    bzero(messageBuffer, sizeof(messageBuffer));
+    bzero(messageBuffer, MAX_SIZE);
   
   }
   return 0;
