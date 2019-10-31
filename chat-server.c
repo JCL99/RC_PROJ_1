@@ -16,6 +16,7 @@
 int socket_fd,tamanho, connection_fd, client_socket[MAXCLIENTS];
 int max_fd, fd, fd_changed;
 struct sockaddr_in server_addr, client_addr;
+int opt=1;
 
 void setupSocket(char *port);
 
@@ -30,32 +31,30 @@ int main(int argc, char **argv, char **envp){
     fprintf(stderr, "[!] Try : ./chat-server <port>\n");
     exit(EXIT_FAILURE);
   }
+  
   for (i = 0; i < MAXCLIENTS - 1; i++) {   
       client_socket[i] = 0;   
   }   
-    
 
   /* Setup the socket */
+  
   setupSocket(argv[1]);
   tamanho=sizeof(client_addr);
   while (TRUE){
     FD_ZERO(&readfds);
     FD_SET(socket_fd, &readfds);
-
-    for (int i = 0 ; i < MAXCLIENTS - 1 ; i++) {   
+    int i;
+    for (i = 0; i<MAXCLIENTS-1;i++) {   
       //socket descriptor  
-      fd = client_socket[i];   
-            
+      fd=client_socket[i];     
       //Add the file descriptor to the set, to be used in the select function  
-      if(fd > 0)   
-          FD_SET( fd , &readfds);   
-            
+      if(fd>0)   
+          FD_SET(fd,&readfds);    
       //Highest file decriptor from the sockets  
-      if(fd > max_fd)   
-          max_fd = fd;   
+      if(fd>max_fd)   
+          max_fd=fd;   
     }
-    
-    fd_changed = select( max_fd + 1 , &readfds , NULL , NULL , NULL); 
+    fd_changed = select( max_fd + 1 , &readfds , NULL , NULL , NULL);
     if ((fd_changed < 0)) { 
       fprintf(stderr, "[!] select(): failed\n");  
       exit(EXIT_FAILURE);
@@ -69,52 +68,49 @@ int main(int argc, char **argv, char **envp){
       }
       else{
         /*Adding the socket file descriptor to the list of clients*/
-        for (i = 0 ; i < MAXCLIENTS-1; i++){
+        for (i = 0 ; i < MAXCLIENTS; i++){
           if((client_socket[i] == 0)){
             client_socket[i] = connection_fd; 
             break;
           }
         }
       
-        for (i = 0; i < MAXCLIENTS - 1; i++) {
+        for (i = 0; i < MAXCLIENTS; i++) {
           if ((client_socket[i]) != 0) {
-            dprintf(client_socket[i], "%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+            dprintf(client_socket[i], "%s:%d joined.\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
             /* dprintf(0, "%s:%d joined!\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port)); */
           }
         }
       }
     }
-    for(i = 0 ; i < MAXCLIENTS - 1; i++) {
+    for(i = 0 ; i < MAXCLIENTS; i++) {
       if (FD_ISSET(client_socket[i] , &readfds)){
+        bzero(messageBuffer, sizeof(messageBuffer));
         messageSize = read(client_socket[i], messageBuffer, sizeof(messageBuffer));
-        if(messageBuffer[0] != EOF && messageSize != 0) {
+        getpeername(client_socket[i] , (struct sockaddr*)&client_addr , (socklen_t*)&tamanho);
+        if(messageSize != 0) {
           //send the msg to everyone but who sent it
-          getpeername(client_socket[i] , (struct sockaddr*)&client_addr , (socklen_t*)&tamanho);
-          for (int j = 0; j < MAXCLIENTS - 1; j++) {
-            if (client_socket[i] != client_socket[j] && client_socket[j] != 0) {
-              dprintf(client_socket[j] , "From %s:%d : %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer);
+          for (int j = 0; j < MAXCLIENTS; j++) {
+            if (client_socket[j] != 0) {
+              dprintf(client_socket[j] , "%s:%d %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer);
               /* dprintf(0, " %s:%d: %s", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port), messageBuffer); */
             }
           }
         }
-        if(messageBuffer[0] == EOF){
+        if(messageSize == 0 ){
+          for (int j = 0; j < MAXCLIENTS; j++){
+              if (client_socket[j] != 0){
+                dprintf(client_socket[j], "%s:%d left.\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+              }
+              
+          }
           close(client_socket[i]);
           client_socket[i] = 0;
         }
       }
     }
-    /*if it's read from the stdin a EOF, or a signal to finish, it'll free the port from the socket*/
-    if (FD_ISSET(STDIN, &readfds)){
-      messageSize = read(STDIN, messageBuffer, sizeof(messageBuffer));
-      if (messageBuffer[0] == EOF){
-        for (int j = 0; j < MAXCLIENTS - 1; j++) {
-          if (client_socket[j] != 0)
-            close(client_socket[j]);
-        }
-        close(socket_fd);
-        return 0;
-      } 
-    }
+    bzero(messageBuffer, sizeof(messageBuffer));
+  
   }
   return 0;
 }
@@ -124,6 +120,10 @@ void setupSocket(char *port){
     fprintf(stderr, "[!] setupSocket(): socket() failed\n");
     exit(EXIT_FAILURE);
   }
+  if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &opt, sizeof(opt)) < 0) {
+        fprintf(stderr, "[!] setupSocket(): setsockopt() failed\n");
+        exit(EXIT_FAILURE);
+    }
   max_fd=socket_fd;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
